@@ -1,57 +1,32 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
+*.pyo
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Model binary
+models/*.pkl
+models/*.joblib
+models/*.h5
+!models/.gitkeep
+
+# Streamlit
+.streamlit/secrets.toml
 
 # Environment
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.local
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Node / Javascript
-node_modules/
-npm-debug.log
-yarn-error.log
-dist/
-.next/
-
-# Data
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-
-# IDEs
-.idea/
+# IDE
 .vscode/
+.idea/
 *.swp
+
+# OS
+.DS_Store
+Thumbs.db

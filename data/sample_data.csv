@@ -1,0 +1,7 @@
+nama_produk,stok,stok_minimum,stok_maksimum,status,satuan
+Produk A,150,50,200,aman,pcs
+Produk B,8,10,100,kritis,pcs
+Produk C,300,50,250,overstock,pcs
+Produk D,45,30,150,aman,pcs
+Produk E,5,20,80,kritis,pcs
+Produk F,95,30,100,aman,pcs

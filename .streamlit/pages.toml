@@ -1,0 +1,30 @@
+[theme]
+primaryColor = "#4CA75B"
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#2E5077"
+font = "sans serif"
+
+[server]
+headless = true
+port = 8501
+
+[[pages]]
+path = "PolaStok.py"  
+name = "Login"
+icon = "🔐"
+
+[[pages]]
+path = "pages/1_dashboard.py"
+name = "Beranda"
+icon = "🏠"
+
+[[pages]]
+path = "pages/2_inventaris.py"
+name = "Daftar Barang"
+icon = "📦"
+
+[[pages]]
+path = "pages/3_prediksi.py"
+name = "Prediksi AI"
+icon = "🔮"
