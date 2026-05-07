@@ -1,8 +1,8 @@
 import streamlit as st
 
-# 1. Konfigurasi Halaman & Nama Tab
+# Konfigurasi Halaman
 st.set_page_config(
-    page_title="PolaStok | Masuk", 
+    page_title="PolaStok | Solusi Inventaris UMKM", 
     page_icon="assets/logo.png", 
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -11,23 +11,23 @@ st.set_page_config(
 # CSS 
 st.markdown("""
 <style>
-    /* Hilangkan Sidebar & Header Streamlit */
+    /* Hapus elemen default Streamlit */
     [data-testid="stSidebar"], [data-testid="collapsedControl"], header { display: none !important; }
     
     .stApp { background-color: #F8FAFC; }
 
-    /* Paksa Jarak Rapat */
+    /* Paksa jarak biar rapat */
     .block-container { padding-top: 3rem !important; }
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
     
-    /* Card Container Putih */
+    /* Styling card putih */
     [data-testid="stVerticalBlockBorderWrapper"] {
         background: white;
-        padding: 35px 40px !important;
-        border-radius: 20px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        padding: 40px !important;
+        border-radius: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
         border: 1px solid #E2E8F0;
-        max-width: 420px; /* Ukuran pas biar gak terlalu lebar */
+        max-width: 420px; 
         margin: auto;
     }
 
@@ -80,23 +80,19 @@ _, center, _ = st.columns([0.1, 1, 0.1])
 
 with center:
     with st.container(border=True):
-        # Logo PolaStok (Konsisten ada di halaman Masuk & Daftar)
         st.image("assets/logo.png", use_container_width=True)
         
         if st.session_state.auth_mode == 'masuk':
-            st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-top: -15px; margin-bottom: 20px;'>Silakan masuk ke akun toko Anda</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-top: -15px; margin-bottom: 20px;'>Hentikan tebak-tebakan stok. Masuk sekarang untuk memantau inventaris secara akurat dan otomatis!</p>", unsafe_allow_html=True)
             
-            # Input Fields (Full Bahasa Indonesia)
             user = st.text_input("Nama Pengguna", placeholder="Masukkan nama pengguna")
             pw = st.text_input("Kata Sandi", type="password", placeholder="Masukkan kata sandi")
             
-            st.write("") # Spasi
+            st.write("") 
             
-            # Layout Sampingan (Tombol Masuk & Daftar)
             col_btn, col_txt = st.columns([1.2, 1])
             
             with col_btn:
-                # Perhatikan penambahan type="primary"
                 if st.button("Masuk", type="primary"):
                     if user == "admin" and pw == "admin123":
                         st.session_state.logged_in = True
@@ -106,20 +102,19 @@ with center:
             
             with col_txt:
                 st.markdown("<p style='font-size: 12px; color: #94A3B8; margin-bottom: -15px;'>Belum punya akun?</p>", unsafe_allow_html=True)
-                # Perhatikan penambahan type="secondary"
                 if st.button("Buat Akun Baru", type="secondary"):
                     st.session_state.auth_mode = 'daftar'
                     st.rerun()
 
         else:
             # Mode Registrasi
-            st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-top: -15px; margin-bottom: 20px;'>Daftarkan toko Anda sekarang</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-top: -15px; margin-bottom: 20px;'>Kelola ribuan barang tanpa pusing. Digitalisasi inventaris UMKM Anda hanya dalam hitungan menit.</p>", unsafe_allow_html=True)
             
             st.text_input("Nama Toko", placeholder="Contoh: Warung Berkah")
             st.text_input("Buat Nama Pengguna", placeholder="Gunakan huruf kecil tanpa spasi")
             st.text_input("Buat Kata Sandi", type="password", placeholder="Minimal 8 karakter")
             
-            st.write("") # Spasi
+            st.write("") 
             
             col_reg, col_back = st.columns([1.2, 1])
             with col_reg:
@@ -135,4 +130,4 @@ with center:
 
 # Redirect ke Dashboard kalau sudah login
 if st.session_state.get('logged_in', False):
-    st.switch_page("pages/1_dashboard.py")
+    st.switch_page("pages/1_Beranda.py")

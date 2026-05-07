@@ -3,10 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 from datetime import datetime, timedelta
+from utils.helpers import load_sample_data
 
 # 1. Konfigurasi
 st.set_page_config(page_title="Prediksi AI | PolaStok", page_icon="assets/logo.png", layout="wide")
-st.logo("assets/logo.png", size="large")
 
 if not st.session_state.get('logged_in', False): st.switch_page("PolaStok.py")
 if 'nama_toko' not in st.session_state: st.session_state.nama_toko = 'Toko Anda'
@@ -38,9 +38,12 @@ with st.sidebar:
 st.markdown("<h2 style='color: #1E293B; font-weight: 800; margin-bottom: 5px;'>🔮 Rekomendasi Pintar AI</h2>", unsafe_allow_html=True)
 st.markdown(f"<p style='color: #64748B; font-size: 15px; margin-bottom: 30px;'>Cari tahu perkiraan barang yang akan laku di masa depan agar <b>{st.session_state.nama_toko}</b> bisa bersiap kulakan.</p>", unsafe_allow_html=True)
 
+df = load_sample_data()
+daftar_nama_produk = df['nama_produk'].tolist()
+
 with st.container(border=True):
     col1, col2 = st.columns(2)
-    with col1: produk_pilihan = st.selectbox("Pilih Barang:", ["Minyak Goreng 2L", "Beras Putih 5Kg", "Tepung Terigu 1Kg", "Gula Pasir 1Kg"])
+    with col1: produk_pilihan = st.selectbox("Pilih Barang:", ["Produk A", "Produk B", "Produk C", "Produk D"])
     with col2: horizon_pilihan = st.selectbox("Perkiraan Untuk:", ["7 Hari Ke Depan", "14 Hari Ke Depan", "30 Hari Ke Depan"])
 
 hari_lalu = 14
@@ -72,7 +75,8 @@ with st.container(border=True):
     
     rata_prediksi = int(np.mean(penjualan_prediksi))
     total_kebutuhan = rata_prediksi * hari_depan
-    sisa_stok_saat_ini = np.random.randint(10, 300) 
+    
+    sisa_stok_saat_ini = int(df[df['nama_produk'] == produk_pilihan]['stok'].values[0])
     
     if sisa_stok_saat_ini >= total_kebutuhan:
         status_stok, warna_box, warna_garis, warna_tepi = "<span style='color: #166534; font-weight: 800;'>AMAN ✅</span>", "#F0FDF4", "#4CA75B", "#BBF7D0"
@@ -81,8 +85,7 @@ with st.container(border=True):
         jumlah_beli = total_kebutuhan - sisa_stok_saat_ini
         status_stok, warna_box, warna_garis, warna_tepi = "<span style='color: #B91C1C; font-weight: 800;'>KURANG ⚠️</span>", "#FEF2F2", "#EF4444", "#FECACA"
         teks_saran = f"Sisa stok Anda di toko (<b>{sisa_stok_saat_ini} pcs</b>) <b>TIDAK AKAN CUKUP</b>. Kami menyarankan Anda untuk segera menyiapkan modal dan kulakan tambahan minimal <span style='color: #B91C1C; font-weight: 800; font-size: 16px;'>{jumlah_beli} pcs</span> agar toko tidak kehabisan barang."
-
-    # Trik inset box shadow agar sudut membulat sempurna dan rapi
+        
     st.markdown(f"""
     <div style="background-color: {warna_box}; border: 1px solid {warna_tepi}; box-shadow: inset 5px 0 0 0 {warna_garis}; padding: 20px 20px 20px 25px; border-radius: 8px; margin-top: 10px;">
         <div style="color: #1E293B; font-weight: 800; font-size: 16px; margin-bottom: 8px;">Analisis PolaStok AI untuk {st.session_state.nama_toko}:</div>

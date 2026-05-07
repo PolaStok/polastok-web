@@ -5,7 +5,6 @@ from utils.helpers import load_sample_data
 
 # 1. Konfigurasi Halaman
 st.set_page_config(page_title="Beranda | PolaStok", page_icon="assets/logo.png", layout="wide")
-st.logo("assets/logo.png", size="large") # Kembalikan logo resmi
 
 # Proteksi Login
 if not st.session_state.get('logged_in', False):
@@ -14,7 +13,7 @@ if not st.session_state.get('logged_in', False):
 if 'nama_toko' not in st.session_state:
     st.session_state.nama_toko = 'Toko Anda'
 
-# 2. CSS Figma-Look
+# 2. CSS 
 st.markdown("""
 <style>
     .stApp { background-color: #F8FAFC !important; font-family: 'Inter', sans-serif; }
