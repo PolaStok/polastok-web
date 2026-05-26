@@ -5,10 +5,8 @@ import numpy as np
 from datetime import datetime, timedelta
 from utils.helpers import load_sample_data
 
-# 1. Konfigurasi
 st.set_page_config(page_title="Prediksi AI | PolaStok", page_icon="assets/logo.png", layout="wide")
 
-if not st.session_state.get('logged_in', False): st.switch_page("PolaStok.py")
 if 'nama_toko' not in st.session_state: st.session_state.nama_toko = 'Toko Anda'
 
 st.markdown("""
@@ -19,7 +17,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Sidebar
 with st.sidebar:
     st.image("assets/logo.png", use_container_width=True)
     st.markdown("---")
@@ -32,18 +29,21 @@ with st.sidebar:
                 st.rerun()
     if st.button("🚪 Keluar Akun", type="secondary", use_container_width=True):
         st.session_state.logged_in = False
-        st.switch_page("PolaStok.py")
+        st.switch_page("PolaStok.py")                
 
-# 3. Konten Utama
 st.markdown("<h2 style='color: #1E293B; font-weight: 800; margin-bottom: 5px;'>🔮 Rekomendasi Pintar AI</h2>", unsafe_allow_html=True)
 st.markdown(f"<p style='color: #64748B; font-size: 15px; margin-bottom: 30px;'>Cari tahu perkiraan barang yang akan laku di masa depan agar <b>{st.session_state.nama_toko}</b> bisa bersiap kulakan.</p>", unsafe_allow_html=True)
 
-df = load_sample_data()
+if 'df_inventaris' in st.session_state:
+    df = st.session_state.df_inventaris
+else:
+    df = load_sample_data()
+    
 daftar_nama_produk = df['nama_produk'].tolist()
 
 with st.container(border=True):
     col1, col2 = st.columns(2)
-    with col1: produk_pilihan = st.selectbox("Pilih Barang:", ["Produk A", "Produk B", "Produk C", "Produk D"])
+    with col1: produk_pilihan = st.selectbox("Pilih Barang:", daftar_nama_produk)
     with col2: horizon_pilihan = st.selectbox("Perkiraan Untuk:", ["7 Hari Ke Depan", "14 Hari Ke Depan", "30 Hari Ke Depan"])
 
 hari_lalu = 14
@@ -76,6 +76,9 @@ with st.container(border=True):
     rata_prediksi = int(np.mean(penjualan_prediksi))
     total_kebutuhan = rata_prediksi * hari_depan
     
+    batas_bawah = max(0, int(rata_prediksi * 0.8)) # 20% lebih rendah
+    batas_atas = int(rata_prediksi * 1.2) # 0% lebih tinggi
+    
     sisa_stok_saat_ini = int(df[df['nama_produk'] == produk_pilihan]['stok'].values[0])
     
     if sisa_stok_saat_ini >= total_kebutuhan:
@@ -91,6 +94,7 @@ with st.container(border=True):
         <div style="color: #1E293B; font-weight: 800; font-size: 16px; margin-bottom: 8px;">Analisis PolaStok AI untuk {st.session_state.nama_toko}:</div>
         <div style="color: #334155; font-size: 15px; line-height: 1.6;">
             Berdasarkan tren riwayat penjualan, sistem memperkirakan <b>{produk_pilihan}</b> akan terjual rata-rata <b>{rata_prediksi} pcs per hari</b>.<br>
+            <span style='color: #64748B; font-size: 13.5px;'><i>*Sistem memiliki tingkat keyakinan 95% bahwa produk akan laku di rentang <b>{batas_bawah} hingga {batas_atas} pcs/hari</b>.</i></span><br><br>
             Total perkiraan barang yang akan laku selama {horizon_pilihan.lower()} adalah <b>{total_kebutuhan} pcs</b>.<br><br>
             Status Stok Saat Ini: {status_stok}<br>
             {teks_saran}

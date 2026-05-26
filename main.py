@@ -12,7 +12,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# --- 1. MODEL DATA (Schema) ---
+# MODEL DATA (Schema)
 class PredictRequest(BaseModel):
     nama_produk: str
     horizon: int  
@@ -23,7 +23,7 @@ class PredictResponse(BaseModel):
     estimasi_kebutuhan: int
     pesan: str
 
-# --- 2. LOAD MODEL ML ---
+# LOAD MODEL ML
 MODEL_PATH = "models/model.pkl"
 
 def get_model():
@@ -36,8 +36,7 @@ def get_model():
 
 model = get_model()
 
-# --- 3. ENDPOINTS ---
-
+# ENDPOINTS
 @app.get("/")
 async def root():
     """Endpoint untuk mengecek status API."""
@@ -78,7 +77,7 @@ async def predict_stock(request: PredictRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- 4. DATA INVENTARIS (Optional) ---
+# DATA INVENTARIS
 @app.get("/inventory")
 async def get_inventory():
     """Endpoint jika ingin mengambil data inventaris via API."""

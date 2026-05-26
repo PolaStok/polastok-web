@@ -3,17 +3,11 @@ import pandas as pd
 import plotly.express as px
 from utils.helpers import load_sample_data
 
-# 1. Konfigurasi Halaman
 st.set_page_config(page_title="Beranda | PolaStok", page_icon="assets/logo.png", layout="wide")
-
-# Proteksi Login
-if not st.session_state.get('logged_in', False):
-    st.switch_page("PolaStok.py")
 
 if 'nama_toko' not in st.session_state:
     st.session_state.nama_toko = 'Toko Anda'
 
-# 2. CSS 
 st.markdown("""
 <style>
     .stApp { background-color: #F8FAFC !important; font-family: 'Inter', sans-serif; }
@@ -39,7 +33,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar
 with st.sidebar:
     st.image("assets/logo.png", use_container_width=True)
     st.markdown("---")
@@ -54,35 +47,63 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.switch_page("PolaStok.py")
 
-# 4. Konten Utama
 st.markdown(f"<h2 style='color: #1E293B; font-weight: 800; margin-bottom: 5px;'>👋 Halo, Selamat Datang di {st.session_state.nama_toko}!</h2>", unsafe_allow_html=True)
 st.markdown("<p style='color: #64748B; font-size: 15px; margin-bottom: 25px;'>Ringkasan performa dan kondisi stok barang Anda hari ini.</p>", unsafe_allow_html=True)
 
-df = load_sample_data()
+if 'df_inventaris' in st.session_state:
+    df = st.session_state.df_inventaris
+else:
+    df = load_sample_data()
 
 def draw_card(label, value, footer_text, footer_color="#10B981", icon="📈"):
     st.markdown(f'<div class="figma-card"><p class="card-label">{label}</p><p class="card-value">{value}</p><div class="card-footer" style="color: {footer_color};"><span style="margin-right: 6px; font-size: 16px;">{icon}</span> {footer_text}</div></div>', unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
 with col1: draw_card("Total Produk", f"{len(df)} Barang", "Semua Kategori", "#10B981", "📦")
-with col2: draw_card("Stok Aman", f"{len(df[df['status']=='aman'])} Barang", "Kondisi Stabil", "#10B981", "✅")
-with col3: draw_card("Stok Menipis", f"{len(df[df['status']=='kritis'])} Barang", "Segera Beli", "#EF4444", "⚠️")
+with col2: draw_card("Stok Aman", f"{len(df[df['status']=='Aman'])} Barang", "Kondisi Stabil", "#10B981", "✅")
+with col3: draw_card("Stok Menipis", f"{len(df[df['status']=='Kritis'])} Barang", "Segera Beli", "#EF4444", "⚠️")
 with col4: draw_card("Prediksi AI", "92% Tepat", "Sangat Akurat", "#10B981", "🤖")
 
 with st.container(border=True):
     st.markdown("<h4 style='color: #1E293B; margin-bottom: 5px;'>📊 Status Ketersediaan Barang</h4>", unsafe_allow_html=True)
     st.markdown("<p style='color: #64748B; font-size: 14px; margin-bottom: 20px; margin-top: -5px;'>Perbandingan jumlah sisa stok untuk masing-masing produk.</p>", unsafe_allow_html=True)
-    fig = px.bar(df.head(5), x="nama_produk", y="stok", color="status", color_discrete_map={"aman": "#2E5077", "kritis": "#EF4444", "overstock": "#F59E0B"}, template="plotly_white", text_auto=True)
+    fig = px.bar(df.head(5), x="nama_produk", y="stok", color="status", color_discrete_map={"Aman": "#2E5077", "Kritis": "#EF4444", "Overstock": "#F59E0B"}, template="plotly_white", text_auto=True)
     fig.update_traces(textfont_size=13, textangle=0, textposition="outside", cliponaxis=False)
     fig.update_layout(xaxis_title=None, yaxis_title=None, margin=dict(l=0, r=0, t=10, b=0), height=300, showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
 with st.container(border=True):
-    st.markdown("<h4 style='color: #1E293B; display: flex; align-items: center; gap: 10px; margin-bottom: 5px;'>⚠️ Daftar Barang Harus Dibeli</h4>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #64748B; font-size: 14px; margin-bottom: 15px; margin-top: -5px;'>Prioritaskan untuk menyetok ulang barang-barang di bawah ini:</p>", unsafe_allow_html=True)
-    kritis_list = df[df['status'] == 'kritis']
+    st.markdown("<h4 style='color: #1E293B; display: flex; align-items: center; gap: 10px; margin-bottom: 5px;'>⚠️ Daftar Barang Kritis & Simulasi Budget</h4>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748B; font-size: 14px; margin-bottom: 15px; margin-top: -5px;'>Masukkan uang Anda, AI akan memprioritaskan barang yang harus dibeli.</p>", unsafe_allow_html=True)
+    
+    kritis_list = df[df['status'] == 'Kritis']
+    
     if not kritis_list.empty:
-        html_table = '<div style="border-radius: 8px; border: 1px solid #E2E8F0; overflow: hidden;"><div class="custom-table-header"><span style="flex: 2; text-align: left; padding-left: 10px;">Nama Barang</span><span style="flex: 1; text-align: right; padding-right: 10px;">Sisa Stok</span></div>'
-        for _, row in kritis_list.iterrows(): html_table += f'<div class="custom-table-row"><span style="flex: 2; color: #334155; text-align: left; font-size: 14px; font-weight: 600; padding-left: 10px;">{row["nama_produk"]}</span><span style="flex: 1; color: #EF4444; text-align: right; font-size: 15px; font-weight: 800; padding-right: 10px;">{row["stok"]}</span></div>'
-        st.markdown(html_table + '</div>', unsafe_allow_html=True)
-    else: st.info("Mantap! Tidak ada barang yang stoknya menipis saat ini. Kondisi toko aman. ✅")
+        budget_user = st.number_input("Budget Kulakan Anda Hari Ini (Rp)", min_value=0, step=50000)
+        
+        if budget_user > 0:
+            kritis_list = kritis_list.sort_values(by='stok') # Urutkan dari stok paling sedikit
+            sisa_budget = budget_user
+            
+            html_table = '<div style="border-radius: 8px; border: 1px solid #E2E8F0; overflow: hidden;"><div class="custom-table-header"><span style="flex: 2; text-align: left; padding-left: 10px;">Nama Barang</span><span style="flex: 1; text-align: center;">Sisa Stok</span><span style="flex: 1; text-align: right; padding-right: 10px;">Rekomendasi AI</span></div>'
+            
+            for _, row in kritis_list.iterrows():
+                harga = row.get('harga', 25000)
+                bisa_beli = 0
+                if sisa_budget >= harga:
+                    bisa_beli = sisa_budget // harga
+                    sisa_budget -= (bisa_beli * harga)
+                
+                teks_beli = f"<span style='color: #10B981;'>Beli {bisa_beli} pcs</span>" if bisa_beli > 0 else "<span style='color: #94A3B8;'>Uang kurang</span>"
+                
+                html_table += f'<div class="custom-table-row"><span style="flex: 2; color: #334155; text-align: left; font-size: 14px; font-weight: 600; padding-left: 10px;">{row["nama_produk"]}</span><span style="flex: 1; color: #EF4444; text-align: center; font-size: 15px; font-weight: 800;">{row["stok"]}</span><span style="flex: 1; text-align: right; font-size: 14px; font-weight: 700; padding-right: 10px;">{teks_beli}</span></div>'
+                
+            html_table += f'<div style="background-color: #F8FAFC; padding: 12px 16px; text-align: right; font-size: 14px; font-weight: 600; color: #64748B;">Sisa Uang Anda: <span style="color: #1E293B;">Rp {sisa_budget:,}</span></div></div>'
+            st.markdown(html_table, unsafe_allow_html=True)
+            
+        else:
+            html_table = '<div style="border-radius: 8px; border: 1px solid #E2E8F0; overflow: hidden;"><div class="custom-table-header"><span style="flex: 2; text-align: left; padding-left: 10px;">Nama Barang</span><span style="flex: 1; text-align: right; padding-right: 10px;">Sisa Stok</span></div>'
+            for _, row in kritis_list.iterrows(): html_table += f'<div class="custom-table-row"><span style="flex: 2; color: #334155; text-align: left; font-size: 14px; font-weight: 600; padding-left: 10px;">{row["nama_produk"]}</span><span style="flex: 1; color: #EF4444; text-align: right; font-size: 15px; font-weight: 800; padding-right: 10px;">{row["stok"]}</span></div>'
+            st.markdown(html_table + '</div>', unsafe_allow_html=True)
+    else: 
+        st.info("Mantap! Tidak ada barang yang stoknya menipis saat ini. Kondisi toko aman. ✅")

@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from utils.helpers import load_sample_data
 
-# 1. Konfigurasi Halaman 
 st.set_page_config(page_title="Daftar Barang | PolaStok", page_icon="assets/logo.png", layout="wide")
 
 if not st.session_state.get('logged_in', False): 
@@ -19,10 +18,11 @@ if 'df_inventaris' not in st.session_state:
     if 'harga' not in df_awal.columns:
         np.random.seed(42)
         df_awal['harga'] = np.random.randint(10, 50, size=len(df_awal)) * 1000
+    if 'safety_stock' not in df_awal.columns:
+        df_awal['safety_stock'] = 15
     df_awal['status'] = df_awal['status'].str.capitalize()
     st.session_state.df_inventaris = df_awal
 
-# 2. CSS 
 st.markdown("""
 <style>
     .stApp { background-color: #F8FAFC !important; font-family: 'Inter', sans-serif; }
@@ -37,7 +37,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar 
 with st.sidebar:
     st.image("assets/logo.png", use_container_width=True)
     st.markdown("---")
@@ -52,12 +51,10 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.switch_page("PolaStok.py")
 
-# ----------------- Tambah barang baru ------------
 with st.expander("➕ Tambah Barang Baru", expanded=False):
     st.write("Isi detail barang dagangan baru, lalu klik Simpan.")
     
     with st.form("form_tambah_barang", clear_on_submit=True):
-        # Bikin form menyamping biar nggak terlalu panjang ke bawah
         col_form1, col_form2 = st.columns(2)
         with col_form1:
             nama_baru = st.text_input("Nama Produk*")
@@ -79,7 +76,8 @@ with st.expander("➕ Tambah Barang Baru", expanded=False):
                     "satuan": "pcs",
                     "status": status_baru,
                     "kategori": kategori_baru,
-                    "harga": harga_baru
+                    "harga": harga_baru,
+                    "safety_stock": 15
                 }])
                 st.session_state.df_inventaris = pd.concat([data_baru, st.session_state.df_inventaris], ignore_index=True)
                 st.success(f"Barang {nama_baru} berhasil ditambahkan!")
@@ -93,15 +91,21 @@ df_display = st.session_state.df_inventaris.copy()
 
 if search_query: 
     df_display = df_display[df_display['nama_produk'].str.contains(search_query, case=False, na=False)]
-# Persiapan data
-df_display = df_display.rename(columns={'nama_produk': 'Nama Produk', 'kategori': 'Kategori', 'harga': 'Harga Satuan (Rp)', 'stok': 'Sisa Stok', 'status': 'Status'})
-cols_to_show = ['Nama Produk', 'Kategori', 'Harga Satuan (Rp)', 'Sisa Stok', 'Status']
 
-# Rapihkan nama kolom untuk ditampilkan
-df_display = df_display.rename(columns={'nama_produk': 'Nama Produk', 'kategori': 'Kategori', 'harga': 'Harga Satuan (Rp)', 'stok': 'Sisa Stok', 'status': 'Status'})
-cols_to_show = ['Nama Produk', 'Kategori', 'Harga Satuan (Rp)', 'Sisa Stok', 'Status']
+df_display['kekurangan'] = (df_display['safety_stock'] - df_display['stok']).clip(lower=0)
+df_display['potensi_kerugian'] = df_display['kekurangan'] * df_display['harga']
 
-# 6. Menampilkan Tabel Interaktif
+df_display = df_display.rename(columns={
+    'nama_produk': 'Nama Produk', 
+    'kategori': 'Kategori', 
+    'harga': 'Harga Satuan (Rp)', 
+    'stok': 'Sisa Stok', 
+    'status': 'Status',
+    'potensi_kerugian': 'Potensi Kerugian (Rp)'
+})
+
+cols_to_show = ['Nama Produk', 'Kategori', 'Harga Satuan (Rp)', 'Sisa Stok', 'Status', 'Potensi Kerugian (Rp)']
+
 with st.container(border=True):
     edited_df = st.data_editor(
         df_display[cols_to_show],
@@ -113,14 +117,30 @@ with st.container(border=True):
             "Kategori": st.column_config.SelectboxColumn("Kategori", width="small", options=["Sembako", "Minuman", "Snack", "Lainnya"]),
             "Harga Satuan (Rp)": st.column_config.NumberColumn("Harga Satuan (Rp)", width="small", format="%d"),
             "Sisa Stok": st.column_config.NumberColumn("Sisa Stok", width="small", min_value=0),
-            "Status": st.column_config.TextColumn("Status", width="small", disabled=True)
+            # --- PERBAIKAN: Tambah koma di belakang disabled=True ---
+            "Status": st.column_config.TextColumn("Status", width="small", disabled=True),
+            "Potensi Kerugian (Rp)": st.column_config.NumberColumn("Potensi Kerugian (Rp)", width="medium", format="%d", disabled=True)
         }
     )
     
     if not edited_df.equals(df_display[cols_to_show]):
-        reversed_cols = {'Nama Produk': 'nama_produk', 'Kategori': 'kategori', 'Harga Satuan (Rp)': 'harga', 'Sisa Stok': 'stok', 'Status': 'status'}
+        reversed_cols = {
+            'Nama Produk': 'nama_produk', 
+            'Kategori': 'kategori', 
+            'Harga Satuan (Rp)': 'harga', 
+            'Sisa Stok': 'stok', 
+            'Status': 'status',
+            'Potensi Kerugian (Rp)': 'potensi_kerugian'
+        }
         df_to_save = edited_df.rename(columns=reversed_cols)
         df_to_save['satuan'] = "pcs" 
+        
+        if 'safety_stock' not in df_to_save.columns:
+            df_to_save['safety_stock'] = 15
+        
+        if 'potensi_kerugian' in df_to_save.columns:
+            df_to_save = df_to_save.drop(columns=['potensi_kerugian'])
+        
         st.session_state.df_inventaris = df_to_save
 
 st.caption("💡 **Tips:** Klik dua kali pada sel tabel untuk **mengubah data**. Untuk **menghapus barang**, centang kotak kecil di ujung kiri baris, lalu tekan tombol `Delete` atau `Backspace` di keyboard Anda.")

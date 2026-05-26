@@ -1,6 +1,5 @@
 import streamlit as st
 
-# Konfigurasi Halaman
 st.set_page_config(
     page_title="PolaStok | Solusi Inventaris UMKM", 
     page_icon="assets/logo.png", 
@@ -8,7 +7,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS 
 st.markdown("""
 <style>
     /* Hapus elemen default Streamlit */
@@ -51,83 +49,32 @@ st.markdown("""
         background-color: #3d8649 !important;
         transform: translateY(-2px);
     }
-    
-    /* TOMBOL LINK (Tipe Secondary - Sejajar di Samping) */
-    button[kind="secondary"] {
-        background-color: transparent !important;
-        color: #4CA75B !important;
-        border: none !important;
-        box-shadow: none !important;
-        text-decoration: underline;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        padding: 0 !important;
-        margin-top: 8px !important; /* Biar sejajar tengah sama tombol ijo */
-        text-align: left !important;
-    }
-    button[kind="secondary"]:hover {
-        color: #2E5077 !important; /* Berubah navy pas disentuh */
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Inisialisasi Mode
-if 'auth_mode' not in st.session_state:
-    st.session_state.auth_mode = 'masuk'
-
-# Konten Tengah
 _, center, _ = st.columns([0.1, 1, 0.1])
 
 with center:
     with st.container(border=True):
-        st.image("assets/logo.png", use_container_width=True)
         
-        if st.session_state.auth_mode == 'masuk':
-            st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-top: -15px; margin-bottom: 20px;'>Hentikan tebak-tebakan stok. Masuk sekarang untuk memantau inventaris secara akurat dan otomatis!</p>", unsafe_allow_html=True)
-            
-            user = st.text_input("Nama Pengguna", placeholder="Masukkan nama pengguna")
-            pw = st.text_input("Kata Sandi", type="password", placeholder="Masukkan kata sandi")
-            
-            st.write("") 
-            
-            col_btn, col_txt = st.columns([1.2, 1])
-            
-            with col_btn:
-                if st.button("Masuk", type="primary"):
-                    if user == "admin" and pw == "admin123":
-                        st.session_state.logged_in = True
-                        st.rerun()
-                    else:
-                        st.error("Nama pengguna atau kata sandi salah!")
-            
-            with col_txt:
-                st.markdown("<p style='font-size: 12px; color: #94A3B8; margin-bottom: -15px;'>Belum punya akun?</p>", unsafe_allow_html=True)
-                if st.button("Buat Akun Baru", type="secondary"):
-                    st.session_state.auth_mode = 'daftar'
-                    st.rerun()
+        logo_kiri, logo_tengah, logo_kanan = st.columns([0.15, 0.7, 0.15])
+        with logo_tengah:
+            st.image("assets/logo.png", use_container_width=True)
+        
+        st.markdown("<h3 style='text-align: center; color: #1E293B; margin-top: -10px; margin-bottom: 5px; font-weight: 700;'>Selamat Datang! 👋</h3>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-bottom: 25px;'>Silakan masuk untuk memantau inventaris otomatis.</p>", unsafe_allow_html=True)
+        
+        user = st.text_input("Nama Pengguna", placeholder="Masukkan nama pengguna")
+        pw = st.text_input("Kata Sandi", type="password", placeholder="Masukkan kata sandi")
+        
+        st.write("") 
+        
+        if st.button("Masuk", type="primary", use_container_width=True):
+            if user == "admin" and pw == "admin123":
+                st.session_state.logged_in = True
+                st.rerun()
+            else:
+                st.error("Nama pengguna atau kata sandi salah!")
 
-        else:
-            # Mode Registrasi
-            st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-top: -15px; margin-bottom: 20px;'>Kelola ribuan barang tanpa pusing. Digitalisasi inventaris UMKM Anda hanya dalam hitungan menit.</p>", unsafe_allow_html=True)
-            
-            st.text_input("Nama Toko", placeholder="Contoh: Warung Berkah")
-            st.text_input("Buat Nama Pengguna", placeholder="Gunakan huruf kecil tanpa spasi")
-            st.text_input("Buat Kata Sandi", type="password", placeholder="Minimal 8 karakter")
-            
-            st.write("") 
-            
-            col_reg, col_back = st.columns([1.2, 1])
-            with col_reg:
-                if st.button("Buat akun baru", type="primary"):
-                    st.success("Akun berhasil dibuat!")
-                    st.session_state.auth_mode = 'masuk'
-                    st.rerun()
-            with col_back:
-                st.markdown("<p style='font-size: 12px; color: #94A3B8; margin-bottom: -15px;'>Sudah ada akun?</p>", unsafe_allow_html=True)
-                if st.button("Masuk di sini", type="secondary"):
-                    st.session_state.auth_mode = 'masuk'
-                    st.rerun()
-
-# Redirect ke Dashboard kalau sudah login
 if st.session_state.get('logged_in', False):
     st.switch_page("pages/1_Beranda.py")
