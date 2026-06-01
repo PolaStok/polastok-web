@@ -8,11 +8,11 @@ Aplikasi web PolaStok berbasis **Streamlit** untuk visualisasi inventaris, predi
 
 ```
 polastok-web/
-├── app.py                     # Entry point utama Streamlit
+├── PolaStok.py                # Entry point utama Streamlit
 ├── pages/
-│   ├── 1_dashboard.py         # KPI & ringkasan inventaris
-│   ├── 2_inventaris.py        # Tabel daftar & manajemen stok
-│   └── 3_prediksi.py          # Prediksi demand dari model ML
+│   ├── 1_Beranda.py           # KPI & ringkasan inventaris
+│   ├── 2_Inventaris.py        # Tabel daftar & manajemen stok
+│   └── 3_Rekomendasi.py       # Prediksi demand dari model ML
 ├── components/
 │   ├── charts.py              # Fungsi grafik (Plotly)
 │   └── alerts.py              # Komponen peringatan stok
@@ -53,7 +53,7 @@ pip install -r requirements.txt
 ## 🚀 Menjalankan Aplikasi
 
 ```bash
-streamlit run app.py
+streamlit run PolaStok.py
 ```
 
 Buka browser: `http://localhost:8501`
@@ -74,11 +74,11 @@ cp ../polastok-ml/models/model.pkl models/model.pkl
 
 ## 🖥️ Halaman Aplikasi
 
-| Halaman | File | Deskripsi |
-|---------|------|-----------|
-| Dashboard | `pages/1_dashboard.py` | KPI stok, tren, peringatan dini |
-| Inventaris | `pages/2_inventaris.py` | Tabel produk + filter status |
-| Prediksi | `pages/3_prediksi.py` | Forecast demand 1–3 bulan |
+| Halaman     | File                     | Deskripsi                       |
+| ----------- | ------------------------ | ------------------------------- |
+| Beranda     | `pages/1_Beranda.py`     | KPI stok, tren, peringatan dini |
+| Inventaris  | `pages/2_Inventaris.py`  | Tabel produk + filter status    |
+| Rekomendasi | `pages/3_Rekomendasi.py` | Forecast demand 1–3 bulan       |
 
 ---
 
@@ -86,15 +86,15 @@ cp ../polastok-ml/models/model.pkl models/model.pkl
 
 1. Push ke branch `main`
 2. Buka [share.streamlit.io](https://share.streamlit.io) → **New app**
-3. Pilih repo `PolaStok/polastok-web`, branch `main`, file `app.py`
+3. Pilih repo `PolaStok/polastok-web`, branch `main`, file `PolaStok.py`
 4. Klik **Deploy**
 
 ---
 
 ## 🌿 Git Flow
 
-| Branch | Kegunaan |
-|--------|----------|
-| `main` | Production-ready |
-| `dev` | Pengembangan aktif |
+| Branch         | Kegunaan                    |
+| -------------- | --------------------------- |
+| `main`         | Production-ready            |
+| `dev`          | Pengembangan aktif          |
 | `feature/nama` | Fitur baru → merge ke `dev` |
