@@ -9,11 +9,14 @@ venv/
 env/
 .venv/
 
-# Model binary
+# Model binary (jangan di-push ke Git — ukuran besar)
 models/*.pkl
 models/*.joblib
 models/*.h5
+models/*.keras
+models/historical_data.csv
 !models/.gitkeep
+!models/*.json
 
 # Streamlit
 .streamlit/secrets.toml

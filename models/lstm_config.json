@@ -1,0 +1,10 @@
+{
+  "window_size": 30,
+  "features": [
+    "sales",
+    "day_of_week",
+    "month"
+  ],
+  "n_features": 3,
+  "batch_size": 512
+}
