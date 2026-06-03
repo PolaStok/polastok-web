@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy seluruh kode aplikasi
 COPY . .
 
-# Expose port yang digunakan oleh Cloud Run
+# Expose port (biasanya 8080)
 EXPOSE 8080
 
-# Jalankan server FastAPI menggunakan Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Jalankan server FastAPI menggunakan Uvicorn dengan environment variable PORT
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}

@@ -10,3 +10,7 @@ tensorflow-cpu
 tf-keras
 # Utilitas Cloud
 gdown==5.2.0
+
+# Backend API (FastAPI)
+fastapi>=0.100.0
+uvicorn>=0.23.0
