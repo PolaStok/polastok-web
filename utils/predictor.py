@@ -122,12 +122,24 @@ def _add_ewm_features(df: pd.DataFrame) -> pd.DataFrame:
 # ===========================================================
 # LOAD ARTIFACTS — @st.cache_resource agar dimuat sekali saja
 # ===========================================================
+
+def _ensure_models_exist():
+    """Mengecek apakah file model ada, jika tidak, download otomatis dari GDrive (untuk Cloud)."""
+    if not os.path.exists(RF_MODEL_PATH) or not os.path.exists(HISTORY_PATH):
+        try:
+            from utils.download_models import download_if_missing
+            download_if_missing()
+        except Exception as e:
+            st.error(f"Gagal memanggil auto-downloader: {str(e)}")
+
+
 @st.cache_resource(show_spinner="Memuat model AI...")
 def load_rf_model():
     """
     Load Random Forest model + scaler + feature names.
     Di-cache oleh Streamlit → hanya dimuat sekali per session.
     """
+    _ensure_models_exist()
     model        = joblib.load(RF_MODEL_PATH)
     scaler       = joblib.load(RF_SCALER_PATH)
     with open(FEATURE_NAMES_PATH) as f:
@@ -141,6 +153,7 @@ def load_history() -> pd.DataFrame:
     Load historical_data.csv (data penjualan 2013-2017).
     Di-cache oleh Streamlit → hanya dimuat sekali.
     """
+    _ensure_models_exist()
     df = pd.read_csv(HISTORY_PATH, parse_dates=["date"])
     return df
 
@@ -149,10 +162,19 @@ def load_history() -> pd.DataFrame:
 def load_lstm_model():
     """
     Load LSTM model + scaler + config.
-    Import TensorFlow di sini agar tidak memperlambat startup
-    jika LSTM tidak dipakai.
     """
+    _ensure_models_exist()
     import tensorflow as tf  # noqa: F401
+    
+    # Monkey patch Dense untuk bypass bug quantization_config di Keras 3
+    original_dense_from_config = tf.keras.layers.Dense.from_config
+    
+    def custom_dense_from_config(cls, config):
+        if 'quantization_config' in config:
+            del config['quantization_config']
+        return original_dense_from_config(config)
+        
+    tf.keras.layers.Dense.from_config = classmethod(custom_dense_from_config)
 
     model  = tf.keras.models.load_model(LSTM_MODEL_PATH)
     scaler = joblib.load(LSTM_SCALER_PATH)
