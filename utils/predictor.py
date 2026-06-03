@@ -365,8 +365,9 @@ def predict_demand(
         preds = predict_rf(nama_produk, horizon_days, start_date)
 
     return {
-        "dates"      : dates,
-        "predictions": preds,
-        "model_type" : model_type,
-        "produk"     : nama_produk,
+        "dates"       : dates,
+        "predictions" : preds,
+        "model_type"  : model_type,
+        "produk"      : nama_produk,
+        "horizon_days": horizon_days,
     }
