@@ -59,7 +59,7 @@ with center:
         
         logo_kiri, logo_tengah, logo_kanan = st.columns([0.15, 0.7, 0.15])
         with logo_tengah:
-            st.image("assets/logo.png", use_container_width=True)
+            st.image("assets/logo.png", use_column_width=True)
         
         st.markdown("<h3 style='text-align: center; color: #1E293B; margin-top: -10px; margin-bottom: 5px; font-weight: 700;'>Selamat Datang! 👋</h3>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #64748B; font-size: 14px; margin-bottom: 25px;'>Silakan masuk untuk memantau inventaris otomatis.</p>", unsafe_allow_html=True)
