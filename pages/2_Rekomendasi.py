@@ -14,7 +14,6 @@ st.set_page_config(page_title="Prediksi AI | PolaStok", page_icon="assets/logo.p
 if 'nama_toko' not in st.session_state:
     st.session_state.nama_toko = 'Toko Anda'
 
-# Bersihkan session state lama yang tidak kompatibel
 if "last_prediction" in st.session_state:
     pred_cached = st.session_state["last_prediction"]
     if "horizon_days" not in pred_cached:
@@ -31,7 +30,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.image("assets/logo.png", use_column_width=True)
+    st.image("assets/logo.png", use_container_width=True)
     st.markdown("---")
     with st.popover("⚙️ Pengaturan Toko", use_container_width=True):
         st.write("Edit Profil UMKM")
@@ -40,16 +39,10 @@ with st.sidebar:
             if st.form_submit_button("Simpan Perubahan", type="primary"):
                 st.session_state.nama_toko = new_name
                 st.rerun()
-    if st.button("🚪 Keluar Akun", type="secondary", use_container_width=True):
-        st.session_state.logged_in = False
-        st.switch_page("PolaStok.py")
 
 st.markdown("<h2 style='color: #1E293B; font-weight: 800; margin-bottom: 5px;'>🔮 Rekomendasi Pintar AI</h2>", unsafe_allow_html=True)
 st.markdown(f"<p style='color: #64748B; font-size: 15px; margin-bottom: 30px;'>Prediksi permintaan barang masa depan agar <b>{st.session_state.nama_toko}</b> bisa bersiap kulakan lebih cerdas.</p>", unsafe_allow_html=True)
 
-# ------------------------------------------------------------------
-# Daftar produk
-# ------------------------------------------------------------------
 if 'df_inventaris' in st.session_state:
     df = st.session_state.df_inventaris
 else:
@@ -57,9 +50,6 @@ else:
 
 daftar_nama_produk = df['nama_produk'].tolist()
 
-# ------------------------------------------------------------------
-# Panel input
-# ------------------------------------------------------------------
 with st.container(border=True):
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -80,9 +70,6 @@ horizon_days = int(horizon_pilihan.split()[0])
 model_type   = "rf" if "RF" in model_pilihan else "lstm"
 model_label  = "Random Forest" if model_type == "rf" else "LSTM"
 
-# ------------------------------------------------------------------
-# Tombol Prediksi
-# ------------------------------------------------------------------
 with st.container(border=True):
     btn_predict = st.button("🔮 Jalankan Prediksi", type="primary", use_container_width=True)
 
@@ -103,7 +90,6 @@ with st.container(border=True):
             st.error(f"❌ Terjadi error saat prediksi: {e}")
             st.stop()
 
-    # Tampilkan info jika ada prediksi tersimpan
     if "last_prediction" in st.session_state:
         latency_ms = st.session_state.get("last_latency", 0)
         col_info1, col_info2, col_info3 = st.columns(3)
@@ -111,9 +97,6 @@ with st.container(border=True):
         col_info2.metric("Horizon", f"{st.session_state.get('last_horizon', '-')} hari")
         col_info3.metric("⚡ Waktu Prediksi", f"{latency_ms:.0f} ms")
 
-# ------------------------------------------------------------------
-# Grafik & Saran — tampilkan jika ada hasil prediksi
-# ------------------------------------------------------------------
 if "last_prediction" in st.session_state:
     result             = st.session_state["last_prediction"]
     saved_model_label  = st.session_state.get("last_model", "Random Forest")
@@ -123,7 +106,6 @@ if "last_prediction" in st.session_state:
     tgl_prediksi       = pd.to_datetime(result["dates"])
     penjualan_prediksi = result["predictions"]
 
-    # Grafik historis semu 14 hari sebelumnya (untuk konteks visual)
     start_dt   = datetime.strptime(result["dates"][0], "%Y-%m-%d")
     tgl_asli   = pd.date_range(start_dt - timedelta(days=14), periods=14)
     np.random.seed(abs(hash(saved_produk)) % (2**31))
@@ -164,7 +146,6 @@ if "last_prediction" in st.session_state:
         fig.update_yaxes(showgrid=True, gridcolor='#F1F5F9')
         st.plotly_chart(fig, use_container_width=True)
 
-    # Saran Tindakan
     with st.container(border=True):
         st.markdown("<h4 style='color: #1E293B; margin-bottom: 5px;'>💡 Saran Tindakan untuk Anda</h4>", unsafe_allow_html=True)
 

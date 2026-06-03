@@ -5,8 +5,6 @@ from utils.helpers import load_sample_data
 
 st.set_page_config(page_title="Daftar Barang | PolaStok", page_icon="assets/logo.png", layout="wide")
 
-if not st.session_state.get('logged_in', False): 
-    st.switch_page("PolaStok.py")
 if 'nama_toko' not in st.session_state: 
     st.session_state.nama_toko = 'Toko Anda'
 
@@ -38,7 +36,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.image("assets/logo.png", use_column_width=True)
+    st.image("assets/logo.png", use_container_width=True)
     st.markdown("---")
     with st.popover("⚙️ Pengaturan Toko", use_container_width=True):
         st.write("Edit Profil UMKM")
@@ -47,9 +45,6 @@ with st.sidebar:
             if st.form_submit_button("Simpan Perubahan", type="primary"):
                 st.session_state.nama_toko = new_name
                 st.rerun()
-    if st.button("🚪 Keluar Akun", type="secondary", use_container_width=True):
-        st.session_state.logged_in = False
-        st.switch_page("PolaStok.py")
 
 with st.expander("➕ Tambah Barang Baru", expanded=False):
     st.write("Isi detail barang dagangan baru, lalu klik Simpan.")
@@ -117,7 +112,6 @@ with st.container(border=True):
             "Kategori": st.column_config.SelectboxColumn("Kategori", width="small", options=["Sembako", "Minuman", "Snack", "Lainnya"]),
             "Harga Satuan (Rp)": st.column_config.NumberColumn("Harga Satuan (Rp)", width="small", format="%d"),
             "Sisa Stok": st.column_config.NumberColumn("Sisa Stok", width="small", min_value=0),
-            # --- PERBAIKAN: Tambah koma di belakang disabled=True ---
             "Status": st.column_config.TextColumn("Status", width="small", disabled=True),
             "Potensi Kerugian (Rp)": st.column_config.NumberColumn("Potensi Kerugian (Rp)", width="medium", format="%d", disabled=True)
         }
