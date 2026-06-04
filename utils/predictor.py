@@ -334,7 +334,8 @@ def predict_lstm(
         # Inverse transform
         dummy       = np.zeros((1, len(lstm_features)))
         dummy[0, 0] = pred_scaled
-        pred_real   = lstm_scaler.inverse_transform(dummy)[0][0]
+        dummy_df    = pd.DataFrame(dummy, columns=lstm_features)
+        pred_real   = lstm_scaler.inverse_transform(dummy_df)[0][0]
         pred_int    = max(0, round(float(pred_real)))
         results.append(pred_int)
 
@@ -346,7 +347,7 @@ def predict_lstm(
             "sales" : float(pred_int),
         }])
         new_row_raw  = _create_date_features(new_row_raw)
-        new_row_feat = new_row_raw[lstm_features].values
+        new_row_feat = new_row_raw[lstm_features]
         new_row_scaled = lstm_scaler.transform(new_row_feat).tolist()[0]
 
         window.pop(0)
