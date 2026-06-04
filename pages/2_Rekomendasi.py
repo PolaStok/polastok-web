@@ -30,7 +30,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.image("assets/logo.png", use_container_width=True)
+    st.image("assets/logo.png", use_column_width=True)
     st.markdown("---")
     with st.popover("⚙️ Pengaturan Toko", use_container_width=True):
         st.write("Edit Profil UMKM")
