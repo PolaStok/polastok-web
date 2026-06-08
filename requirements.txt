@@ -1,16 +1,13 @@
-streamlit==1.35.0
-pandas==2.2.2
-numpy==1.26.4
-plotly==5.22.0
-scikit-learn==1.6.1
-joblib==1.4.2
-# Deep Learning — untuk model LSTM
-# Gunakan tensorflow-cpu agar lebih ringan di Streamlit Community Cloud
-tensorflow-cpu
+streamlit>=1.40.0
+pandas>=2.0.0
+numpy>=2.0.0
+plotly>=5.0.0
+scikit-learn>=1.0.0
+joblib>=1.0.0
+tensorflow-cpu>=2.15.0
 tf-keras
-# Utilitas Cloud
-gdown==5.2.0
-
-# Backend API (FastAPI)
+gdown>=5.0.0
 fastapi>=0.100.0
 uvicorn>=0.23.0
+protobuf>=6.31.1,<8.0.0
+google-genai

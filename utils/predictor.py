@@ -3,16 +3,11 @@ utils/predictor.py
 ==================
 Pipeline inferensi model ML PolaStok — embedded langsung di Streamlit.
 
-Berisi:
-  - PRODUCT_MAP     : Pemetaan nama produk UMKM → item_id Kaggle
-  - load_rf_model() : Load model RF + scaler (@st.cache_resource)
-  - load_history()  : Load historical_data.csv (@st.cache_data)
-  - predict_rf()    : Inference loop Random Forest (N hari ke depan)
-  - predict_lstm()  : Inference loop LSTM (N hari ke depan)
-
-Catatan:
-  - Feature engineering harus IDENTIK dengan saat training (src/features.py polastok-ml).
-  - Tidak ada API terpisah — model dipanggil langsung via joblib.
+Catatan arsitektur:
+- Dataset asli: 10 store × 50 item (Kaggle Store Item Demand Forecasting)
+- Di layer UI, 10 store diagregasi menjadi 1 toko tunggal (konteks UMKM)
+- Model inference tetap menggunakan store=1 dari dataset asli
+- Nama produk di-mapping via data/product_names.csv
 """
 
 import json
@@ -37,28 +32,17 @@ HISTORY_PATH       = os.path.join(MODELS_DIR, "historical_data.csv")
 LSTM_MODEL_PATH    = os.path.join(MODELS_DIR, "polastok_lstm_model.keras")
 LSTM_SCALER_PATH   = os.path.join(MODELS_DIR, "lstm_scaler.pkl")
 LSTM_CONFIG_PATH   = os.path.join(MODELS_DIR, "lstm_config.json")
+NAME_MAP_PATH      = os.path.join(BASE_DIR, "data", "data_produk.csv")
 
-# ===========================================================
-# PEMETAAN PRODUK UMKM → item_id & store_id (dataset Kaggle)
-# Sesuaikan dengan produk nyata inventaris UMKM.
-# ===========================================================
-PRODUCT_MAP: dict[str, dict] = {
-    "Produk A": {"item": 1,  "store": 1},
-    "Produk B": {"item": 2,  "store": 1},
-    "Produk C": {"item": 3,  "store": 1},
-    "Produk D": {"item": 8,  "store": 1},
-    "Produk E": {"item": 9,  "store": 1},
-    "Produk F": {"item": 11, "store": 1},
-}
-DEFAULT_MAPPING = {"item": 1, "store": 1}
+# Store yang dipakai untuk inference (store 1 dari dataset asli)
+INFERENCE_STORE = 1
 
 # LSTM config fallback
 LSTM_WINDOW_SIZE = 30
 LSTM_FEATURES    = ["sales", "day_of_week", "month"]
 
-
 # ===========================================================
-# FEATURE ENGINEERING (identik dengan polastok-ml/src/features.py)
+# FEATURE ENGINEERING
 # ===========================================================
 ROLLING_WINDOWS = [7, 14, 30]
 LAG_DAYS        = [7, 14, 30]
@@ -70,7 +54,7 @@ def _create_date_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["month"]          = df["date"].dt.month
     df["day_of_month"]   = df["date"].dt.day
-    df["day_of_week"]    = df["date"].dt.dayofweek + 1   # 1=Senin, 7=Minggu
+    df["day_of_week"]    = df["date"].dt.dayofweek + 1
     df["week_of_year"]   = df["date"].dt.isocalendar().week.astype(int)
     df["quarter"]        = df["date"].dt.quarter
     df["is_wknd"]        = (df["date"].dt.weekday >= 5).astype(int)
@@ -120,11 +104,10 @@ def _add_ewm_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ===========================================================
-# LOAD ARTIFACTS — @st.cache_resource agar dimuat sekali saja
+# LOAD ARTIFACTS
 # ===========================================================
 
 def _ensure_models_exist():
-    """Mengecek apakah file model ada, jika tidak, download otomatis dari GDrive (untuk Cloud)."""
     if not os.path.exists(RF_MODEL_PATH) or not os.path.exists(HISTORY_PATH):
         try:
             from utils.download_models import download_if_missing
@@ -133,15 +116,49 @@ def _ensure_models_exist():
             st.error(f"Gagal memanggil auto-downloader: {str(e)}")
 
 
-@st.cache_resource(show_spinner="Memuat model AI...")
-def load_rf_model():
-    """
-    Load Random Forest model + scaler + feature names.
-    Di-cache oleh Streamlit → hanya dimuat sekali per session.
-    """
+@st.cache_data(show_spinner=False)
+def load_product_list() -> pd.DataFrame:
     _ensure_models_exist()
-    model        = joblib.load(RF_MODEL_PATH)
-    scaler       = joblib.load(RF_SCALER_PATH)
+    df    = pd.read_csv(HISTORY_PATH, usecols=["item"])
+    items = sorted(df["item"].unique())
+    result = pd.DataFrame({
+        "item":        items,
+        "store":       INFERENCE_STORE,
+        "nama_produk": [f"Produk {i}" for i in items],
+        "harga":       0,
+    })
+
+    if os.path.exists(NAME_MAP_PATH):
+        name_map = pd.read_csv(NAME_MAP_PATH)
+        if "store" in name_map.columns:
+            name_map = name_map.drop(columns=["store"])
+        name_map = name_map.rename(columns={
+            "nama_produk": "nama_mapped",
+            "harga":       "harga_mapped"
+        })
+        result = result.merge(name_map, on="item", how="left")
+        result["nama_produk"] = result["nama_mapped"].fillna(result["nama_produk"])
+        result["harga"]       = result["harga_mapped"].fillna(0).astype(int)
+        result = result[["nama_produk", "store", "item", "harga"]]
+
+    return result
+
+
+def get_mapping(nama_produk: str) -> dict:
+    """Ambil store & item dari nama_produk."""
+    product_list = load_product_list()
+    row = product_list[product_list["nama_produk"] == nama_produk]
+    if row.empty:
+        row = product_list.iloc[[0]]
+    return {
+        "store": int(row["store"].values[0]),
+        "item":  int(row["item"].values[0]),
+    }
+    
+def load_rf_model():
+    _ensure_models_exist()
+    model  = joblib.load(RF_MODEL_PATH)
+    scaler = joblib.load(RF_SCALER_PATH)
     with open(FEATURE_NAMES_PATH) as f:
         feature_names = json.load(f)
     return model, scaler, feature_names
@@ -149,31 +166,22 @@ def load_rf_model():
 
 @st.cache_data(show_spinner="Memuat data historis...")
 def load_history() -> pd.DataFrame:
-    """
-    Load historical_data.csv (data penjualan 2013-2017).
-    Di-cache oleh Streamlit → hanya dimuat sekali.
-    """
     _ensure_models_exist()
-    df = pd.read_csv(HISTORY_PATH, parse_dates=["date"])
-    return df
+    return pd.read_csv(HISTORY_PATH, parse_dates=["date"])
 
 
 @st.cache_resource(show_spinner="Memuat model LSTM...")
 def load_lstm_model():
-    """
-    Load LSTM model + scaler + config.
-    """
     _ensure_models_exist()
-    import tensorflow as tf  # noqa: F401
-    
-    # Monkey patch Dense untuk bypass bug quantization_config di Keras 3
+    import tensorflow as tf
+
     original_dense_from_config = tf.keras.layers.Dense.from_config
-    
+
     def custom_dense_from_config(cls, config):
-        if 'quantization_config' in config:
-            del config['quantization_config']
+        if "quantization_config" in config:
+            del config["quantization_config"]
         return original_dense_from_config(config)
-        
+
     tf.keras.layers.Dense.from_config = classmethod(custom_dense_from_config)
 
     model  = tf.keras.models.load_model(LSTM_MODEL_PATH)
@@ -186,85 +194,41 @@ def load_lstm_model():
 # ===========================================================
 # INFERENCE — RANDOM FOREST
 # ===========================================================
-def predict_rf(
-    nama_produk: str,
-    horizon_days: int,
-    start_date: datetime | None = None,
-) -> list[int]:
-    """
-    Prediksi penjualan N hari ke depan menggunakan Random Forest.
-
-    Strategi:
-    - Ambil histori store-item dari historical_data.csv
-    - Untuk setiap hari horizon: hitung fitur → scale → predict
-    - Hasil prediksi dimasukkan ke histori untuk hari berikutnya
-
-    Args:
-        nama_produk  : Nama produk (dari PRODUCT_MAP atau nama bebas).
-        horizon_days : Jumlah hari prediksi (7, 14, atau 30).
-        start_date   : Tanggal awal prediksi. Default: 2018-04-01.
-
-    Returns:
-        List integer prediksi sales per hari.
-    """
+def predict_rf(nama_produk: str, horizon_days: int, start_date: datetime) -> list[int]:
     rf_model, rf_scaler, feature_names = load_rf_model()
     history_df = load_history()
 
-    mapping  = PRODUCT_MAP.get(nama_produk, DEFAULT_MAPPING)
+    mapping  = get_mapping(nama_produk)
     store_id = mapping["store"]
     item_id  = mapping["item"]
 
-    if start_date is None:
-        start_date = datetime(2018, 4, 1)
-
-    # Filter histori untuk store-item yang dipilih
     hist = history_df[
         (history_df["store"] == store_id) &
         (history_df["item"]  == item_id)
     ].copy().sort_values("date").reset_index(drop=True)
 
     results = []
-
     for i in range(horizon_days):
         target_date = pd.Timestamp(start_date + timedelta(days=i))
 
-        # Buat baris baru untuk hari yang diprediksi
-        new_row = pd.DataFrame([{
-            "date"  : target_date,
-            "store" : store_id,
-            "item"  : item_id,
-            "sales" : np.nan,
-        }])
-
-        # Gabungkan ke histori lalu hitung semua fitur
+        new_row  = pd.DataFrame([{"date": target_date, "store": store_id, "item": item_id, "sales": np.nan}])
         combined = pd.concat([hist, new_row], ignore_index=True)
         combined["date"] = pd.to_datetime(combined["date"])
         combined = combined.sort_values(["store", "item", "date"]).reset_index(drop=True)
-
         combined = _create_date_features(combined)
         combined = _add_rolling_features(combined)
         combined = _add_lag_features(combined)
         combined = _add_ewm_features(combined)
 
-        # Ambil baris terakhir (hari yang diprediksi)
-        last_row = combined.iloc[[-1]][feature_names].copy()
-        last_row = last_row.fillna(0)
-
-        # Scale → predict (pertahankan nama kolom agar tidak muncul warning)
+        last_row        = combined.iloc[[-1]][feature_names].copy().fillna(0)
         last_scaled_arr = rf_scaler.transform(last_row)
         last_scaled_df  = pd.DataFrame(last_scaled_arr, columns=feature_names)
-        pred        = rf_model.predict(last_scaled_df)[0]
-        pred_int    = max(0, round(float(pred)))
+        pred_int        = max(0, round(float(rf_model.predict(last_scaled_df)[0])))
         results.append(pred_int)
 
-        # Masukkan hasil ke histori untuk iterasi berikutnya
-        new_hist_row = pd.DataFrame([{
-            "date"  : target_date,
-            "store" : store_id,
-            "item"  : item_id,
-            "sales" : float(pred_int),
-        }])
-        hist = pd.concat([hist, new_hist_row], ignore_index=True)
+        hist = pd.concat([hist, pd.DataFrame([{
+            "date": target_date, "store": store_id, "item": item_id, "sales": float(pred_int),
+        }])], ignore_index=True)
 
     return results
 
@@ -272,84 +236,46 @@ def predict_rf(
 # ===========================================================
 # INFERENCE — LSTM
 # ===========================================================
-def predict_lstm(
-    nama_produk: str,
-    horizon_days: int,
-    start_date: datetime | None = None,
-) -> list[int]:
-    """
-    Prediksi penjualan N hari ke depan menggunakan LSTM.
-
-    Strategi:
-    - Ambil 30 hari terakhir dari histori sebagai seed window
-    - Predict satu hari → geser window → ulangi
-
-    Args:
-        nama_produk  : Nama produk.
-        horizon_days : Jumlah hari prediksi.
-        start_date   : Tanggal awal. Default: 2018-04-01.
-
-    Returns:
-        List integer prediksi sales per hari.
-    """
+def predict_lstm(nama_produk: str, horizon_days: int, start_date: datetime) -> list[int]:
     lstm_model, lstm_scaler, lstm_config = load_lstm_model()
     history_df = load_history()
 
     window_size   = lstm_config.get("window_size", LSTM_WINDOW_SIZE)
     lstm_features = lstm_config.get("features", LSTM_FEATURES)
 
-    mapping  = PRODUCT_MAP.get(nama_produk, DEFAULT_MAPPING)
+    mapping  = get_mapping(nama_produk)
     store_id = mapping["store"]
     item_id  = mapping["item"]
 
-    if start_date is None:
-        start_date = datetime(2018, 4, 1)
-
-    # Ambil histori dan tambahkan date features
     hist = history_df[
         (history_df["store"] == store_id) &
         (history_df["item"]  == item_id)
     ].copy().sort_values("date").reset_index(drop=True)
     hist = _create_date_features(hist)
 
-    # Ambil window_size baris terakhir sebagai seed
     window_df = hist[lstm_features].tail(window_size).copy()
-    window_df = pd.DataFrame(
-        lstm_scaler.transform(window_df),
-        columns=lstm_features
-    )
-    window = window_df.values.tolist()
+    window    = pd.DataFrame(
+        lstm_scaler.transform(window_df), columns=lstm_features
+    ).values.tolist()
 
     results = []
-
     for i in range(horizon_days):
         target_date = pd.Timestamp(start_date + timedelta(days=i))
-
-        # Format input LSTM: (1, window_size, n_features)
-        X = np.array([window], dtype=np.float32)
-
-        # Predict (output dalam skala normalized)
+        X           = np.array([window], dtype=np.float32)
         pred_scaled = lstm_model.predict(X, verbose=0)[0][0]
 
-        # Inverse transform
         dummy       = np.zeros((1, len(lstm_features)))
         dummy[0, 0] = pred_scaled
-        dummy_df    = pd.DataFrame(dummy, columns=lstm_features)
-        pred_real   = lstm_scaler.inverse_transform(dummy_df)[0][0]
-        pred_int    = max(0, round(float(pred_real)))
+        pred_real   = lstm_scaler.inverse_transform(
+            pd.DataFrame(dummy, columns=lstm_features)
+        )[0][0]
+        pred_int = max(0, round(float(pred_real)))
         results.append(pred_int)
 
-        # Buat baris baru dan geser window
-        new_row_raw  = pd.DataFrame([{
-            "date"  : target_date,
-            "store" : store_id,
-            "item"  : item_id,
-            "sales" : float(pred_int),
-        }])
-        new_row_raw  = _create_date_features(new_row_raw)
-        new_row_feat = new_row_raw[lstm_features]
-        new_row_scaled = lstm_scaler.transform(new_row_feat).tolist()[0]
-
+        new_row_raw    = _create_date_features(pd.DataFrame([{
+            "date": target_date, "store": store_id, "item": item_id, "sales": float(pred_int),
+        }]))
+        new_row_scaled = lstm_scaler.transform(new_row_raw[lstm_features]).tolist()[0]
         window.pop(0)
         window.append(new_row_scaled)
 
@@ -357,40 +283,63 @@ def predict_lstm(
 
 
 # ===========================================================
-# WRAPPER UTAMA — dipanggil dari pages/3_Rekomendasi.py
+# BUILD INVENTORY — agregasi semua store → 1 toko
 # ===========================================================
-def predict_demand(
-    nama_produk: str,
-    horizon_days: int,
-    model_type: str = "rf",
-) -> dict:
-    """
-    Entry point utama untuk prediksi demand.
-    Dipanggil langsung dari halaman Rekomendasi Streamlit.
+@st.cache_data(show_spinner="Memuat data inventaris...")
+def build_inventory() -> pd.DataFrame:
+    history    = load_history()
+    product_df = load_product_list()  # sudah include kolom harga jika ada
 
-    Args:
-        nama_produk  : Nama produk dari inventaris.
-        horizon_days : 7, 14, atau 30 hari.
-        model_type   : 'rf' atau 'lstm'.
+    last_date = history["date"].max()
 
-    Returns:
-        Dict berisi tanggal dan prediksi harian.
-    """
-    start_date = datetime(2018, 4, 1)
+    agg_30 = (
+        history[history["date"] > last_date - pd.Timedelta(days=30)]
+        .groupby("item")["sales"]
+        .agg(demand_30d="sum", avg_daily="mean")
+        .reset_index()
+    )
+    agg_7 = (
+        history[history["date"] > last_date - pd.Timedelta(days=7)]
+        .groupby("item")["sales"]
+        .agg(demand_7d="sum")
+        .reset_index()
+    )
+
+    df = agg_30.merge(agg_7, on="item", how="left")
+    df = df.merge(product_df[["item", "nama_produk", "harga"]], on="item", how="left")
+
+    q25 = df["avg_daily"].quantile(0.25)
+    q75 = df["avg_daily"].quantile(0.75)
+
+    df["status"]     = df["avg_daily"].apply(
+        lambda v: "Kritis" if v <= q25 else ("Overstock" if v >= q75 else "Aman")
+    )
+    df["avg_daily"]  = df["avg_daily"].round(1)
+    df["demand_30d"] = df["demand_30d"].astype(int)
+    df["demand_7d"]  = df["demand_7d"].astype(int)
+    df["harga"]      = df["harga"].fillna(0).astype(int)
+    df["kategori"]   = "Umum"
+
+    return df[["nama_produk", "item", "avg_daily", "demand_7d",
+               "demand_30d", "status", "kategori", "harga"]]
+
+
+# ===========================================================
+# ENTRY POINT
+# ===========================================================
+def predict_demand(nama_produk: str, horizon_days: int, model_type: str = "rf") -> dict:
+    start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     dates = [
         (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
         for i in range(horizon_days)
     ]
-
-    if model_type == "lstm":
-        preds = predict_lstm(nama_produk, horizon_days, start_date)
-    else:
-        preds = predict_rf(nama_produk, horizon_days, start_date)
+    preds = predict_lstm(nama_produk, horizon_days, start_date) if model_type == "lstm" \
+            else predict_rf(nama_produk, horizon_days, start_date)
 
     return {
-        "dates"       : dates,
-        "predictions" : preds,
-        "model_type"  : model_type,
-        "produk"      : nama_produk,
+        "dates":        dates,
+        "predictions":  preds,
+        "model_type":   model_type,
+        "produk":       nama_produk,
         "horizon_days": horizon_days,
     }

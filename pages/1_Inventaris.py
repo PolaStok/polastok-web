@@ -1,140 +1,97 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from utils.helpers import load_sample_data
+from utils.predictor import build_inventory
 
-st.set_page_config(page_title="Daftar Barang | PolaStok", page_icon="assets/logo.png", layout="wide")
+st.set_page_config(page_title="Inventaris | PolaStok", page_icon="assets/logo.png", layout="wide")
 
-if 'nama_toko' not in st.session_state: 
-    st.session_state.nama_toko = 'Toko Anda'
-
-# ------- dummy database ----------
-if 'df_inventaris' not in st.session_state:
-    df_awal = load_sample_data()
-    if 'kategori' not in df_awal.columns: 
-        df_awal['kategori'] = 'Sembako'
-    if 'harga' not in df_awal.columns:
-        np.random.seed(42)
-        df_awal['harga'] = np.random.randint(10, 50, size=len(df_awal)) * 1000
-    if 'safety_stock' not in df_awal.columns:
-        df_awal['safety_stock'] = 15
-    df_awal['status'] = df_awal['status'].str.capitalize()
-    st.session_state.df_inventaris = df_awal
+if "nama_toko" not in st.session_state:
+    st.session_state.nama_toko = "Toko Anda"
 
 st.markdown("""
 <style>
     .stApp { background-color: #F8FAFC !important; font-family: 'Inter', sans-serif; }
-    [data-testid="stSidebarNav"] > div:first-child > span { font-size: 32px !important; font-weight: 900 !important; color: #1E293B !important; letter-spacing: -0.5px !important; margin-left: 10px; }
-    .main div[data-testid="stButton"] > button {
-        background-color: white !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 20px 24px !important;
-        color: #1E293B !important; font-weight: 600 !important; display: flex !important; justify-content: flex-start !important;
-        width: 100% !important; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02) !important; margin-bottom: 25px !important;
-    }
-    .main div[data-testid="stButton"] > button:hover { border-color: #CBD5E1 !important; background-color: #F8FAFC !important; }
-    .stTextInput input { border-radius: 8px !important; border: 1px solid #E2E8F0 !important; padding: 12px 16px !important; background-color: white !important; }
+    [data-testid="stVerticalBlockBorderWrapper"] { background-color: white; border-radius: 12px; border: 1px solid #E2E8F0; padding: 24px !important; margin-bottom: 20px; }
+    .section-title { color: #0F172A; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .section-sub   { color: #94A3B8; font-size: 13px; margin-bottom: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.image("assets/logo.png", use_column_width=True)
+    st.image("assets/logo.png", width=200)
     st.markdown("---")
-    with st.popover("⚙️ Pengaturan Toko", use_container_width=True):
-        st.write("Edit Profil UMKM")
-        with st.form("form_pengaturan_1"):
+    with st.popover("Pengaturan Toko", use_container_width=True):
+        with st.form("form_pengaturan"):
             new_name = st.text_input("Nama Toko", value=st.session_state.nama_toko)
-            if st.form_submit_button("Simpan Perubahan", type="primary"):
+            if st.form_submit_button("Simpan", type="primary"):
                 st.session_state.nama_toko = new_name
                 st.rerun()
 
-with st.expander("➕ Tambah Barang Baru", expanded=False):
-    st.write("Isi detail barang dagangan baru, lalu klik Simpan.")
-    
-    with st.form("form_tambah_barang", clear_on_submit=True):
-        col_form1, col_form2 = st.columns(2)
-        with col_form1:
-            nama_baru = st.text_input("Nama Produk*")
-            kategori_baru = st.selectbox("Kategori", ["Sembako", "Minuman", "Snack", "Lainnya"])
-        with col_form2:
-            harga_baru = st.number_input("Harga Satuan (Rp)", min_value=0, step=1000)
-            stok_baru = st.number_input("Stok Awal", min_value=0, step=1)
-        
-        submit_btn = st.form_submit_button("Simpan Barang", type="primary")
-        
-        if submit_btn:
-            if nama_baru.strip() == "":
-                st.error("Nama produk tidak boleh kosong!")
-            else:
-                status_baru = "Aman" if stok_baru > 10 else "Kritis"
-                data_baru = pd.DataFrame([{
-                    "nama_produk": nama_baru,
-                    "stok": stok_baru,
-                    "satuan": "pcs",
-                    "status": status_baru,
-                    "kategori": kategori_baru,
-                    "harga": harga_baru,
-                    "safety_stock": 15
-                }])
-                st.session_state.df_inventaris = pd.concat([data_baru, st.session_state.df_inventaris], ignore_index=True)
-                st.success(f"Barang {nama_baru} berhasil ditambahkan!")
-                st.rerun() 
+# Paksa rebuild jika struktur kolom lama
+REQUIRED_COLS = {"demand_7d", "demand_30d", "avg_daily", "kategori", "harga"}
+if "df_inventaris" not in st.session_state or \
+   not REQUIRED_COLS.issubset(st.session_state.df_inventaris.columns):
+    st.session_state.df_inventaris = build_inventory()
 
-col_search, col_kosong = st.columns([1.5, 2])
-with col_search: 
-    search_query = st.text_input("Pencarian", placeholder="🔍 Cari nama barang...", label_visibility="collapsed")
+# Header
+st.markdown("<h2 style='color:#0F172A; font-weight:700; margin-bottom:4px;'>Inventaris Produk</h2>", unsafe_allow_html=True)
+st.markdown(f"<p style='color:#94A3B8; font-size:14px; margin-bottom:24px;'>Data permintaan produk berdasarkan histori penjualan · {st.session_state.nama_toko}</p>", unsafe_allow_html=True)
+
+# Filter
+col_search, col_status, _ = st.columns([2, 1, 3])
+with col_search:
+    search_query = st.text_input("Cari produk", placeholder="Cari nama produk...", label_visibility="collapsed")
+with col_status:
+    status_filter = st.selectbox("Status", ["Semua Status", "Aman", "Kritis", "Overstock"], label_visibility="collapsed")
 
 df_display = st.session_state.df_inventaris.copy()
+if search_query:
+    df_display = df_display[df_display["nama_produk"].str.contains(search_query, case=False, na=False)]
+if status_filter != "Semua Status":
+    df_display = df_display[df_display["status"] == status_filter]
 
-if search_query: 
-    df_display = df_display[df_display['nama_produk'].str.contains(search_query, case=False, na=False)]
-
-df_display['kekurangan'] = (df_display['safety_stock'] - df_display['stok']).clip(lower=0)
-df_display['potensi_kerugian'] = df_display['kekurangan'] * df_display['harga']
-
-df_display = df_display.rename(columns={
-    'nama_produk': 'Nama Produk', 
-    'kategori': 'Kategori', 
-    'harga': 'Harga Satuan (Rp)', 
-    'stok': 'Sisa Stok', 
-    'status': 'Status',
-    'potensi_kerugian': 'Potensi Kerugian (Rp)'
-})
-
-cols_to_show = ['Nama Produk', 'Kategori', 'Harga Satuan (Rp)', 'Sisa Stok', 'Status', 'Potensi Kerugian (Rp)']
-
+# Tabel
 with st.container(border=True):
+    st.markdown("<div class='section-title'>Daftar Produk</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-sub'>Kolom Kategori dan Harga Satuan dapat diedit langsung.</div>", unsafe_allow_html=True)
+
+    cols_show = ["nama_produk", "item", "avg_daily", "demand_7d", "demand_30d", "status", "kategori", "harga"]
+
     edited_df = st.data_editor(
-        df_display[cols_to_show],
+        df_display[cols_show],
         use_container_width=True,
         hide_index=True,
-        num_rows="dynamic",
+        num_rows="fixed",
         column_config={
-            "Nama Produk": st.column_config.TextColumn("Nama Produk", width="medium"),
-            "Kategori": st.column_config.SelectboxColumn("Kategori", width="small", options=["Sembako", "Minuman", "Snack", "Lainnya"]),
-            "Harga Satuan (Rp)": st.column_config.NumberColumn("Harga Satuan (Rp)", width="small", format="%d"),
-            "Sisa Stok": st.column_config.NumberColumn("Sisa Stok", width="small", min_value=0),
-            "Status": st.column_config.TextColumn("Status", width="small", disabled=True),
-            "Potensi Kerugian (Rp)": st.column_config.NumberColumn("Potensi Kerugian (Rp)", width="medium", format="%d", disabled=True)
+            "nama_produk": st.column_config.TextColumn("Nama Produk",        width="large",  disabled=True),
+            "item":        st.column_config.NumberColumn("ID Produk",         width="small",  disabled=True),
+            "avg_daily":   st.column_config.NumberColumn("Rata-rata/Hari",    width="small",  disabled=True, format="%.1f"),
+            "demand_7d":   st.column_config.NumberColumn("Permintaan 7 Hari", width="small",  disabled=True),
+            "demand_30d":  st.column_config.NumberColumn("Permintaan 30 Hari",width="medium", disabled=True),
+            "status":      st.column_config.TextColumn("Status",              width="small",  disabled=True),
+            "kategori":    st.column_config.SelectboxColumn(
+                               "Kategori", width="small",
+                               options=["Umum", "Sembako", "Minuman", "Snack", "Kebersihan", "Rokok", "Lainnya"]
+                           ),
+            "harga":       st.column_config.NumberColumn("Harga Satuan (Rp)", width="medium", format="%d", min_value=0),
         }
     )
-    
-    if not edited_df.equals(df_display[cols_to_show]):
-        reversed_cols = {
-            'Nama Produk': 'nama_produk', 
-            'Kategori': 'kategori', 
-            'Harga Satuan (Rp)': 'harga', 
-            'Sisa Stok': 'stok', 
-            'Status': 'status',
-            'Potensi Kerugian (Rp)': 'potensi_kerugian'
-        }
-        df_to_save = edited_df.rename(columns=reversed_cols)
-        df_to_save['satuan'] = "pcs" 
-        
-        if 'safety_stock' not in df_to_save.columns:
-            df_to_save['safety_stock'] = 15
-        
-        if 'potensi_kerugian' in df_to_save.columns:
-            df_to_save = df_to_save.drop(columns=['potensi_kerugian'])
-        
-        st.session_state.df_inventaris = df_to_save
 
-st.caption("💡 **Tips:** Klik dua kali pada sel tabel untuk **mengubah data**. Untuk **menghapus barang**, centang kotak kecil di ujung kiri baris, lalu tekan tombol `Delete` atau `Backspace` di keyboard Anda.")
+    # Simpan perubahan kategori & harga
+    if not edited_df.equals(df_display[cols_show]):
+        for _, row in edited_df.iterrows():
+            mask = st.session_state.df_inventaris["item"] == row["item"]
+            st.session_state.df_inventaris.loc[mask, "kategori"] = row["kategori"]
+            st.session_state.df_inventaris.loc[mask, "harga"]    = row["harga"]
+
+# Ringkasan
+with st.container(border=True):
+    st.markdown("<div class='section-title'>Ringkasan</div>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total Produk", len(df_display))
+    c2.metric("Aman",         len(df_display[df_display["status"] == "Aman"]))
+    c3.metric("Kritis",       len(df_display[df_display["status"] == "Kritis"]),
+              delta=f"{len(df_display[df_display['status']=='Kritis'])} perlu perhatian" if len(df_display[df_display["status"]=="Kritis"]) > 0 else None,
+              delta_color="inverse")
+    c4.metric("Overstock",    len(df_display[df_display["status"] == "Overstock"]),
+              delta=f"{len(df_display[df_display['status']=='Overstock'])} kelebihan" if len(df_display[df_display["status"]=="Overstock"]) > 0 else None,
+              delta_color="inverse")
