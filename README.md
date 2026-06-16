@@ -36,6 +36,7 @@ PolaStok adalah dashboard prediktif berbasis Machine Learning yang dirancang unt
 ---
 
 ## Arsitektur Sistem
+```text
 polastok-web/
 
 │
@@ -99,6 +100,7 @@ polastok-web/
 ├── requirements.txt
 
 └── Dockerfile
+```
 
 ---
 
@@ -185,6 +187,7 @@ python utils/download_models.py
 
 **Opsi B — Download manual:**
 Minta akses folder Google Drive kepada Tim Pijak, lalu letakkan file berikut di folder `models/`:
+```text
 models/
 
 ├── polastok_rf_model.pkl
@@ -200,6 +203,7 @@ models/
 ├── lstm_scaler.pkl
 
 └── lstm_config.json
+```
 
 ### 5. Konfigurasi API Key Gemini
 
