@@ -18,12 +18,11 @@ PolaStok adalah dashboard prediktif berbasis Machine Learning yang dirancang unt
 - [Arsitektur Sistem](#arsitektur-sistem)
 - [Catatan Dataset](#catatan-dataset)
 - [Tech Stack](#tech-stack)
+- [Struktur Folder](#struktur-folder)
 - [Cara Menjalankan Lokal](#cara-menjalankan-lokal)
 - [Cara Deploy ke Streamlit Community Cloud](#cara-deploy-ke-streamlit-community-cloud)
 - [Konfigurasi API Key](#konfigurasi-api-key)
-- [Evaluasi Model](#evaluasi-model)
 - [Tim Pengembang](#tim-pengembang)
-- [Lisensi](#lisensi)
 
 ---
 
@@ -37,41 +36,69 @@ PolaStok adalah dashboard prediktif berbasis Machine Learning yang dirancang unt
 ---
 
 ## Arsitektur Sistem
-
-```
+```text
 polastok-web/
+
 │
+
 ├── PolaStok.py                  # Halaman Beranda (entry point)
+
 ├── pages/
+
 │   ├── 1_Inventaris.py          # Halaman daftar & status produk
+
 │   └── 2_Rekomendasi.py         # Halaman prediksi demand + Gemini AI
+
 │
+
 ├── utils/
+
 │   ├── predictor.py             # Pipeline ML inference (RF & LSTM)
+
 │   ├── helpers.py               # Fungsi bantu umum
+
 │   └── download_models.py       # Auto-downloader model dari Google Drive
+
 │
+
 ├── notebooks/
-│   └── PolaStok_ML.ipynb        # Notebook Pembangunan Model
-│
+
+│   ├── PolaStok_ML.ipynb             # Notebook Pembangunan Model
+
 ├── models/                      # File model AI (tidak di-push ke GitHub)
+
 │   ├── polastok_rf_model.pkl
+
 │   ├── minmax_scaler.pkl
+
 │   ├── feature_names.json
+
 │   ├── historical_data.csv
+
 │   ├── polastok_lstm_model.keras
+
 │   ├── lstm_scaler.pkl
+
 │   └── lstm_config.json
+
 │
+
 ├── data/
+
 │   └── product_names.csv        # Mapping item ID → nama produk UMKM
+
 │
+
 ├── assets/                      # Logo dan gambar UI
+
 ├── .streamlit/
+
 │   ├── config.toml              # Konfigurasi tema Streamlit
+
 │   └── secrets.toml             # API key (TIDAK di-push ke GitHub)
-│
+
 ├── requirements.txt
+
 └── Dockerfile
 ```
 
@@ -115,7 +142,7 @@ Dalam implementasi nyata, model akan di-*retrain* menggunakan data transaksi tok
 
 - Python 3.11
 - Git
-- Akses ke file model (lihat langkah 4)
+- Akses ke file model (lihat langkah 3)
 
 ### 1. Clone Repository
 
@@ -153,25 +180,28 @@ pip install -r requirements.txt
 File model tidak disimpan di GitHub karena ukurannya besar. Ada dua cara:
 
 **Opsi A — Auto-download via script:**
-
 ```bash
 python utils/download_models.py
 ```
-
 > Pastikan ID Google Drive di `utils/download_models.py` sudah diisi dengan benar oleh tim.
 
 **Opsi B — Download manual:**
-
 Minta akses folder Google Drive kepada Tim Pijak, lalu letakkan file berikut di folder `models/`:
-
-```
+```text
 models/
+
 ├── polastok_rf_model.pkl
+
 ├── minmax_scaler.pkl
+
 ├── feature_names.json
+
 ├── historical_data.csv
+
 ├── polastok_lstm_model.keras
+
 ├── lstm_scaler.pkl
+
 └── lstm_config.json
 ```
 
@@ -184,7 +214,7 @@ GEMINI_API_KEY = "isi_api_key_kamu_di_sini"
 ```
 
 > Dapatkan API key gratis di: https://aistudio.google.com/app/apikey
->
+> 
 > **Jangan pernah push file ini ke GitHub.**
 
 ### 6. Jalankan Aplikasi
@@ -253,4 +283,4 @@ Untuk deployment di Streamlit Community Cloud, secrets diatur melalui dashboard 
 
 ## Lisensi
 
-Proyek ini dikembangkan untuk keperluan akademik sebagai syarat kelulusan program Pijak Dicoding 2026.
+Proyek ini dikembangkan untuk keperluan akademik sebagai syarat kelulusan program Pijak Dicoding 2026
