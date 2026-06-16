@@ -1,107 +1,256 @@
-# PolaStok: Smart Inventory System untuk UMKM
-> **Repository polastok-web** ini adalah bagian frontend (Streamlit) dari proyek PolaStok.
+# PolaStok — Smart Inventory & Demand Forecasting untuk UMKM
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.35.0-red)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+PolaStok adalah dashboard prediktif berbasis Machine Learning yang dirancang untuk membantu pemilik UMKM memahami pola permintaan produk dan mengambil keputusan kulakan yang lebih cerdas.
+
+> Dikembangkan oleh **Tim PJK-GM041** sebagai proyek capstone program pelatihan AI Engineer Pijak Dicoding.
 
 ![PolaStok Beranda](assets/ui%20beranda.png)
 
-PolaStok adalah aplikasi dashboard prediktif khusus untuk UMKM yang dapat memprediksi kapan barang akan habis terjual berdasarkan pola masa lalu. Ini adalah produk Minimum Viable Product (MVP) yang dikembangkan oleh Tim Pijak (Dicoding Capstone).
+---
 
-## 🚀 Fitur Utama
-1. **Rekomendasi AI**: Menggunakan model *Machine Learning* (Random Forest & LSTM) untuk memprediksi angka penjualan harian hingga 30 hari ke depan.
-2. **Status Inventaris Realtime**: Kategorisasi "Aman", "Kritis", dan "Overstock".
-3. **Simulasi Budget Kulakan**: Secara pintar memprioritaskan barang mana yang harus dibeli sesuai sisa budget Anda.
-4. **Embedded Inference Pipeline**: Model ML berjalan secara langsung di atas *memory* Streamlit menggunakan `joblib` tanpa memerlukan server API / Docker tambahan, membuatnya sangat cepat & murah.
+## Daftar Isi
+
+- [Fitur Utama](#fitur-utama)
+- [Arsitektur Sistem](#arsitektur-sistem)
+- [Catatan Dataset](#catatan-dataset)
+- [Tech Stack](#tech-stack)
+- [Cara Menjalankan Lokal](#cara-menjalankan-lokal)
+- [Cara Deploy ke Streamlit Community Cloud](#cara-deploy-ke-streamlit-community-cloud)
+- [Konfigurasi API Key](#konfigurasi-api-key)
+- [Evaluasi Model](#evaluasi-model)
+- [Tim Pengembang](#tim-pengembang)
+- [Lisensi](#lisensi)
 
 ---
 
-## 🛠️ Tech Stack
-- **Frontend & App Framework**: [Streamlit](https://streamlit.io/)
-- **Data & Feature Engineering**: Pandas, NumPy
-- **Machine Learning**: Scikit-Learn (Random Forest), TensorFlow-CPU (LSTM)
-- **Visualisasi Grafik**: Plotly Express, Plotly Graph Objects
+## Fitur Utama
+
+- **Dashboard Inventaris** — Ringkasan kondisi permintaan 50 produk berdasarkan data historis penjualan
+- **Prediksi Demand** — Proyeksi penjualan harian 7, 14, atau 30 hari ke depan menggunakan Random Forest dan LSTM
+- **Rekomendasi AI** — Analisis dan saran kulakan yang dihasilkan oleh Google Gemini AI berdasarkan hasil prediksi model
+- **Embedded Inference** — Model ML berjalan langsung di memory Streamlit tanpa server API terpisah
 
 ---
 
-## 📂 Struktur Folder
-```text
+## Arsitektur Sistem
+
+```
 polastok-web/
-├── PolaStok.py               # Halaman utama (Login)
-├── pages/                    # Halaman dashboard (Beranda, Inventaris, Rekomendasi)
+│
+├── PolaStok.py                  # Halaman Beranda (entry point)
+├── pages/
+│   ├── 1_Inventaris.py          # Halaman daftar & status produk
+│   └── 2_Rekomendasi.py         # Halaman prediksi demand + Gemini AI
+│
 ├── utils/
-│   ├── helpers.py            # Fungsi bantu umum (load data dummy/inventaris)
-│   ├── predictor.py          # Pipeline ML inference (RF & LSTM) embedded
-│   └── download_models.py    # Auto-downloader dari Google Drive untuk server Cloud
-├── models/                   # Tempat menaruh file model AI (.pkl, .keras, .csv)
-├── data/                     # Dataset inventaris.csv
-├── assets/                   # Gambar, icon, UI preview
-└── requirements.txt          # Library Python yang dibutuhkan
+│   ├── predictor.py             # Pipeline ML inference (RF & LSTM)
+│   ├── helpers.py               # Fungsi bantu umum
+│   └── download_models.py       # Auto-downloader model dari Google Drive
+│
+├── notebooks/
+│   └── PolaStok_ML.ipynb        # Notebook Pembangunan Model
+│
+├── models/                      # File model AI (tidak di-push ke GitHub)
+│   ├── polastok_rf_model.pkl
+│   ├── minmax_scaler.pkl
+│   ├── feature_names.json
+│   ├── historical_data.csv
+│   ├── polastok_lstm_model.keras
+│   ├── lstm_scaler.pkl
+│   └── lstm_config.json
+│
+├── data/
+│   └── product_names.csv        # Mapping item ID → nama produk UMKM
+│
+├── assets/                      # Logo dan gambar UI
+├── .streamlit/
+│   ├── config.toml              # Konfigurasi tema Streamlit
+│   └── secrets.toml             # API key (TIDAK di-push ke GitHub)
+│
+├── requirements.txt
+└── Dockerfile
 ```
 
 ---
 
-## 💻 Cara Install & Run di Lokal (Local Development)
+## Catatan Dataset
 
-### 1. Clone Repository & Setup Virtual Environment
+Model ML dilatih menggunakan dataset publik [**Store Item Demand Forecasting Challenge**](https://www.kaggle.com/competitions/demand-forecasting-kernels-only) dari Kaggle — berisi 5 tahun data penjualan harian dari 10 toko dan 50 produk (2013–2017).
+
+**Mengapa dataset ini?**
+Dataset ini dipilih karena memiliki karakteristik pola demand yang bersifat universal: tren mingguan, pola musiman, dan variasi antar produk — karakteristik yang juga ditemukan di toko UMKM Indonesia.
+
+**Penyesuaian untuk konteks UMKM:**
+- 10 store dalam dataset diagregasi menjadi **1 representasi toko tunggal** di layer UI
+- 50 item di-mapping ke nama produk FMCG/sembako yang relevan untuk warung Indonesia via `data/product_names.csv`
+- Model inference tetap menggunakan `store=1` dari dataset asli untuk menjaga kualitas prediksi
+
+**Skenario produksi:**
+Dalam implementasi nyata, model akan di-*retrain* menggunakan data transaksi toko UMKM yang bersangkutan (minimal 6 bulan ke belakang) untuk menghasilkan prediksi yang benar-benar personal.
+
+---
+
+## Tech Stack
+
+| Komponen | Library / Tool |
+|---|---|
+| App Framework | Streamlit 1.35.0 |
+| Data Processing | Pandas 2.2.2, NumPy 1.26.4 |
+| Machine Learning | Scikit-Learn 1.6.1 (Random Forest) |
+| Deep Learning | TensorFlow-CPU, tf-keras (LSTM) |
+| Visualisasi | Plotly 5.22.0 |
+| Generative AI | Google Gemini API (google-genai) |
+| Model Serialization | Joblib 1.4.2 |
+| Cloud Download | gdown 5.2.0 |
+
+---
+
+## Cara Menjalankan Lokal
+
+### Prasyarat
+
+- Python 3.11
+- Git
+- Akses ke file model (lihat langkah 4)
+
+### 1. Clone Repository
+
 ```bash
 git clone https://github.com/PolaStok/polastok-web.git
 cd polastok-web
+```
 
-# Buat virtual environment (opsional tapi disarankan)
+### 2. Buat Virtual Environment
+
+```bash
+# Buat venv
 python -m venv venv
 
-# Aktifkan virtual environment
-# Windows:
+# Aktifkan — Windows:
 venv\Scripts\activate
-# Mac/Linux:
+
+# Aktifkan — Mac/Linux:
 source venv/bin/activate
 ```
 
-### 2. Install Library
+### 3. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Siapkan File Model
-Karena ukuran file model AI terlalu besar untuk disimpan di GitHub, Anda harus mendownloadnya secara manual atau via script:
-- Jalankan script auto-downloader:
-  ```bash
-  python utils/download_models.py
-  ```
-- *Atau*, minta akses folder Google Drive kepada Tim Pijak dan masukkan file-file ini ke folder `models/`:
-  - `polastok_rf_model.pkl` (7 MB)
-  - `historical_data.csv` (18 MB)
-  - `polastok_lstm_model.keras`
-  - (beserta semua file scaler dan json)
+> **Catatan:** Jika muncul warning konflik `scikit-learn`, jalankan:
+> ```bash
+> pip install scikit-learn==1.6.1
+> ```
 
-### 4. Jalankan Aplikasi
+### 4. Siapkan File Model
+
+File model tidak disimpan di GitHub karena ukurannya besar. Ada dua cara:
+
+**Opsi A — Auto-download via script:**
+
+```bash
+python utils/download_models.py
+```
+
+> Pastikan ID Google Drive di `utils/download_models.py` sudah diisi dengan benar oleh tim.
+
+**Opsi B — Download manual:**
+
+Minta akses folder Google Drive kepada Tim Pijak, lalu letakkan file berikut di folder `models/`:
+
+```
+models/
+├── polastok_rf_model.pkl
+├── minmax_scaler.pkl
+├── feature_names.json
+├── historical_data.csv
+├── polastok_lstm_model.keras
+├── lstm_scaler.pkl
+└── lstm_config.json
+```
+
+### 5. Konfigurasi API Key Gemini
+
+Buat file `.streamlit/secrets.toml`:
+
+```toml
+GEMINI_API_KEY = "isi_api_key_kamu_di_sini"
+```
+
+> Dapatkan API key gratis di: https://aistudio.google.com/app/apikey
+>
+> **Jangan pernah push file ini ke GitHub.**
+
+### 6. Jalankan Aplikasi
+
 ```bash
 streamlit run PolaStok.py
 ```
-Aplikasi akan terbuka secara otomatis di browser pada `http://localhost:8501`.
-- Username: `admin`
-- Password: `admin123`
+
+Aplikasi akan terbuka otomatis di browser pada `http://localhost:8501`.
 
 ---
 
-## ☁️ Cara Deploy ke Streamlit Community Cloud (Production)
+## Cara Deploy ke Streamlit Community Cloud
 
-Untuk *deployment*, kita menggunakan **Streamlit Community Cloud** (Gratis). 
-Karena keterbatasan limit memori dan GitHub file size (maks 100MB per file), kita telah memodifikasi sistem ini agar melakukan **Auto-Download dari Google Drive** ketika server berjalan.
+1. Fork atau push repository ini ke GitHub kamu
+2. Buka [share.streamlit.io](https://share.streamlit.io) dan login dengan akun GitHub
+3. Klik **New App**
+4. Pilih repository dan branch `main`, set **Main file path** ke `PolaStok.py`
+5. Klik **Advanced settings** → tab **Secrets**, isi:
 
-1. Buka [share.streamlit.io](https://share.streamlit.io/).
-2. Hubungkan akun GitHub Anda.
-3. Klik **New App**.
-4. Pilih repository `PolaStok/polastok-web` dan branch `main`.
-5. Di kolom `Main file path`, isikan `PolaStok.py`.
-6. Klik **Deploy!**
+```toml
+GEMINI_API_KEY = "isi_api_key_kamu_di_sini"
+```
 
-> **PENTING UNTUK DEPLOYMENT:**
-> Sebelum mendeploy, pastikan ID Google Drive di `utils/download_models.py` sudah diisi dengan link ID file GDrive yang asli. Jika model belum terdownload, `utils/predictor.py` akan otomatis memanggil *downloader script* tersebut.
+6. Klik **Deploy**
+
+> **Penting:** Pastikan ID Google Drive di `utils/download_models.py` sudah diisi sebelum deploy agar model ter-download otomatis saat server pertama kali berjalan.
 
 ---
 
-## 👥 Tim Pengembang (Pijak)
-- **Rizky Maulana Harahap** – AI/ML (Data Preparation & Modeling)
-- **Muhamad Fadli Sirojudin** – AI/ML (Training & Tuning)
-- **Fauzi Noorsyabani** – Data Pipeline, System Integration, GitOps
-- **Septian Samdani** – QA Tester, Cloud Deployment
-- **Agni Fatya Kholila** – UI/UX & Web Frontend
+## Konfigurasi API Key
+
+File `.streamlit/secrets.toml.example` tersedia sebagai template:
+
+```toml
+# Salin file ini menjadi secrets.toml dan isi dengan nilai asli
+GEMINI_API_KEY = "your_gemini_api_key_here"
+```
+
+Untuk deployment di Streamlit Community Cloud, secrets diatur melalui dashboard — tidak memerlukan file apapun di repo.
+
+---
+
+## Evaluasi Model
+
+| Model | Metrik | Nilai |
+|---|---|---|
+| Random Forest | SMAPE | ~18% |
+| LSTM | SMAPE | — |
+
+> Nilai SMAPE RF dihitung pada test set periode 2017. Untuk detail lengkap proses training, lihat repository [polastok-ml](https://github.com/PolaStok/polastok-ml).
+
+---
+
+## Tim Pengembang (Pijak)
+
+| Nama | Peran |
+|---|---|
+| Rizky Maulana Harahap | AI/ML — Data Preparation & Modeling |
+| Muhamad Fadli Sirojudin | AI/ML — Training & Tuning |
+| Fauzi Noorsyabani | Data Pipeline, System Integration, GitOps |
+| Septian Samdani | QA Tester, Cloud Deployment |
+| Agni Fatya Kholila | UI/UX & Web Frontend |
+
+---
+
+## Lisensi
+
+Proyek ini dikembangkan untuk keperluan akademik sebagai syarat kelulusan program Pijak Dicoding 2026.
